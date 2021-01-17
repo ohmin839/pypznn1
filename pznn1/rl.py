@@ -38,9 +38,9 @@ class Environment:
             if self.puzzle.has_completed():
                 return grid, 1, True, self.steps
             elif self.steps >= self.limit:
-                return grid, -(1e-3), True, self.steps
+                return grid, 0, True, self.steps
             else:
-                return grid, -(1e-3), False, self.steps
+                return grid, -(1e-2), False, self.steps
 
 class Observer:
     def __init__(self, env):
@@ -76,16 +76,20 @@ class Student:
         normal = K.initializers.glorot_normal()
         self.model = K.models.Sequential([
             K.layers.Conv2D(input_shape=(size, size, 1),
-                            filters=len(self.actions)**3,
-                            kernel_size=size-1, padding="same",
+                            filters=len(self.actions)**4,
+                            kernel_size=size, padding="same",
                             kernel_initializer=normal,
                             activation="relu"),
-            K.layers.Conv2D(filters=len(self.actions)**3,
-                            kernel_size=size-1, padding="same",
+            K.layers.Conv2D(filters=len(self.actions)**4,
+                            kernel_size=size, padding="same",
                             kernel_initializer=normal,
                             activation="relu"),
-            K.layers.Conv2D(filters=len(self.actions)**3,
-                            kernel_size=size-1, padding="same",
+            K.layers.Conv2D(filters=len(self.actions)**4,
+                            kernel_size=size, padding="same",
+                            kernel_initializer=normal,
+                            activation="relu"),
+            K.layers.Conv2D(filters=len(self.actions)**4,
+                            kernel_size=size, padding="same",
                             kernel_initializer=normal,
                             activation="relu"),
             K.layers.Flatten(),
@@ -147,56 +151,16 @@ class Student:
         file_path = os.path.join(os.path.dirname(__file__), file_path)
         self.model.save(file_path, overwrite=True, include_optimizer=False)
 
-    def test(self, obs, episodes, shuffles):
-        successes = 0
-        for e_i in range(episodes):
-            state, answer_actions = obs.reset(shuffles)
-            done = False
-            while not done:
-                action = self.policy(state)
-                next_state, reward, done, steps = obs.step(action)
-                state = next_state
-            else:
-                if reward == 1:
-                    successes += 1
-        else:
-            success_rate = successes * 100 / episodes
-            return success_rate
-
-    def demo(self, size, shuffles):
-        env = Environment(size)
-        obs = Observer(env)
-        pz = env.puzzle
-
-        self.reload_model()
-        model = self.model
-
-        state, _ = obs.reset(shuffles)
-        done = False
-        steps = 0
-
-        while not done:
-            action = self.policy(state)
-            predicted = model.predict(pz.get_grid().reshape(1, size, size, 1))
-            print(env.puzzle, idx2dir(action), predicted)
-            state, reward, done, steps = obs.step(action)
-        print(env.puzzle)
-        if reward == 1:
-            print(f"Conguatulations!({steps} steps)")
-        elif reward == -1:
-            print(f"Failed!({steps} steps)")
-        else:
-            print(f"Exceeded limit steps!({steps} steps)")
-
 class Trainer:
-    def __init__(self, size, lr=1e-3):
+    def __init__(self, size, lr, decay):
         self.size = size
-        self.optimizer = K.optimizers.Adam(lr=lr)
+        self.optimizer = K.optimizers.Adam(lr=lr, decay=decay)
 
-    def train_phase1(self, obs, student, gamma, episodes, shuffles, report_interval=1000):
+    def train_phase1(self, obs, student, shuffles, episodes, gamma, report_interval=1000):
+        student.init_training_phase1(self.size, self.optimizer)
+        print("training phase1")
         actions = []
         states = []
-        student.init_training_phase1(self.size, self.optimizer)
         for e_i in range(1, episodes+1):
             state, answer_actions = obs.reset(shuffles)
             done = False
@@ -214,11 +178,13 @@ class Trainer:
                 if e_i % report_interval == 0:
                     print(f"episodes: {e_i}")
         else:
-            success_rate = student.test(obs, 1000, shuffles)
-            print(f"episodes: {report_interval}, success_rate: {success_rate:3.2f}%")
+            student.save()
+            success_rate = self.get_success_rate(obs, student, shuffles)
+            print(f"success_rate: {success_rate:3.2f}%")
 
-    def train_phase2(self, obs, student, gamma, episodes, shuffles, report_interval=100000):
+    def train_phase2(self, obs, student, shuffles, episodes, gamma, report_interval=100000):
         student.init_training_phase2(self.size, self.optimizer)
+        print("training phase2")
         x = []
         y = []
         for e_i in range(1, episodes+1):
@@ -246,60 +212,95 @@ class Trainer:
                         policy_experiences.append(d_e)
                 elif rewards[-1] == -1:
                     policy_experiences.append(experiences[-1])
+
                 if len(policy_experiences) > 0:
                     student.update_by_policy_gradient(policy_experiences)
+
                 if e_i % report_interval == 0:
-                    success_rate = student.test(obs, 1000, shuffles)
+                    success_rate = self.get_success_rate(obs, student, shuffles)
                     print(f"episodes: {e_i}, success_rate: {success_rate:3.2f}%")
                     x.append(e_i)
                     y.append(success_rate)
         else:
+            student.save()
             plt.plot(x, y)
             plt.show()
 
-def main(size=3, gamma=0.999, lr=1e-3, episodes=1000, shuffles=10, action="play"):
+    def get_success_rate(self, obs, student, shuffles, episodes=1000):
+        successes = 0
+        for e_i in range(episodes):
+            state, answer_actions = obs.reset(shuffles)
+            done = False
+            while not done:
+                action = student.policy(state)
+                next_state, reward, done, steps = obs.step(action)
+                state = next_state
+            else:
+                if reward == 1:
+                    successes += 1
+        else:
+            success_rate = successes * 100 / episodes
+            return success_rate
+
+    def test(self, obs, student, shuffles, episodes):
+        student.reload_model()
+        for s_i in range(1, shuffle+1):
+            rate = self.get_success_rate(obs, s_i, episodes=episodes)
+            print(f"shuffles: {s_i}, success_rate: {success_rate:3.2f}%")
+
+    def demo(self, size, obs, student, shuffles):
+        student.reload_model()
+        model = student.model
+
+        state, _ = obs.reset(shuffles)
+        done = False
+        steps = 0
+
+        pz = obs.env.puzzle
+
+        while not done:
+            action = student.policy(state)
+            predicted = model.predict(pz.get_grid().reshape(1, size, size, 1))
+            print(pz, idx2dir(action), predicted)
+            state, reward, done, steps = obs.step(action)
+        print(pz)
+        if reward == 1:
+            print(f"Conguatulations!({steps} steps)")
+        elif reward == -1:
+            print(f"Failed!({steps} steps)")
+        else:
+            print(f"Exceeded limit steps!({steps} steps)")
+
+def main(size=3, action="test", shuffles=31, episodes=1000, gamma=0.999, lr=1e-3, decay=0):
     env = Environment(size)
     obs = Observer(env)
     student = Student()
+    trainer = Trainer(size, lr, decay)
     if action == "train1":
-        trainer = Trainer(size, lr)
-        trainer.train_phase1(
-                obs, student,
-                gamma, episodes, shuffles)
-        student.save()
+        trainer.train_phase1(obs, student, shuffles, episodes, gamma)
     elif action == "train2":
-        trainer = Trainer(size, lr)
-        trainer.train_phase2(
-                obs, student,
-                gamma, episodes, shuffles)
-        student.save()
+        trainer.train_phase2(obs, student, shuffles, episodes, gamma)
     elif action == "test":
-        self.reload_model()
-        student.test(obs, episodes, shuffles)
+        trainer.test(obs, student, shuffles, episodes, reload_model=True)
     elif action == "demo":
-        student.demo(size, shuffles)
+        trainer.demo(size, obs, student, shuffles)
     else:
         print(f"{action} is not supported option.")
    
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Reinforcement lerning against NxN Puzzle")
-    parser.add_argument("--size", type=int, default=3,
-                        help="specify the size of puzzle")
-    parser.add_argument("--gamma", type=float, default=0.999,
-                        help="")
-    parser.add_argument("--lr", type=float, default=1e-3,
-                        help="")
-    parser.add_argument("--episodes", type=int, default=1000,
-                        help="")
-    parser.add_argument("--shuffles", type=int, default=10,
-                        help="")
-    parser.add_argument("--action", default="test",
-                        help="")
+    parser = argparse.ArgumentParser(description="Reinforcement learning against NxN Puzzle")
+    parser.add_argument("--size", type=int, default=3, help="specify the size of puzzle")
+    parser.add_argument("--action", default="test", help="")
+    parser.add_argument("--shuffles", type=int, default=31, help="")
+    parser.add_argument("--episodes", type=int, default=1000, help="")
+    parser.add_argument("--gamma", type=float, default=0.999, help="")
+    parser.add_argument("--lr", type=float, default=1e-3, help="")
+    parser.add_argument("--decay", type=float, default=0, help="")
     args = parser.parse_args()
-
     main(
-        size=args.size, gamma=args.gamma, lr=args.lr,
-        episodes=args.episodes, shuffles=args.shuffles,
-        action=args.action)
+        size=args.size,
+        action=args.action,
+        shuffles=args.shuffles, episodes=args.episodes,
+        gamma=args.gamma, lr=args.lr, decay=args.decay)
 
