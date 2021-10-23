@@ -18,6 +18,8 @@ def no_grad():
     return using_config('enable_backprop', False)
 
 class Variable:
+    __array_priority__ = 200
+
     def __init__(self, data, name=None):
         if data is not None:
             if not isinstance(data, np.ndarray):
@@ -101,8 +103,15 @@ def as_array(x):
         return np.array(x)
     return x
 
+def as_variable(obj):
+    if isinstance(obj, Variable):
+        return obj
+    return Variable(obj)
+
 class Function:
     def __call__(self, *inputs):
+        inputs = [as_variable(x) for x in inputs]
+
         xs = [x.data for x in inputs]
         ys = self.forward(*xs)
         if not isinstance(ys, tuple):
@@ -162,15 +171,19 @@ class Exp(Function):
         return gx
 
 def add(x0, x1):
+    x1 = as_array(x1)
     f = Add()
     return f(x0, x1)
 
 def mul(x0, x1):
+    x1 = as_array(x1)
     f = Mul()
     return f(x0, x1)
 
 Variable.__add__ = add
+Variable.__radd__ = add
 Variable.__mul__ = mul
+Variable.__rmul__ = mul
 
 def square(x):
     f = Square()
