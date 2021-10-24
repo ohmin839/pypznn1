@@ -150,6 +150,95 @@ class Mul(Function):
         x0, x1 = self.inputs[0].data, self.inputs[1].data
         return gy * x1, gy * x0
 
+class Neg(Function):
+    def forward(self, x):
+        return -x
+
+    def backward(self, gy):
+        return -gy
+
+class Sub(Function):
+    def forward(self, x0, x1):
+        y = x0 - x1
+        return y
+
+    def backward(self, gy):
+        return gy, -gy
+
+class Div(Function):
+    def forward(self, x0, x1):
+        y = x0 / x1
+        return y
+
+    def backward(self, gy):
+        x0, x1 = self.inputs[0].data, self.inputs[1].data
+        gx0 = gy / x1
+        gx1 = gy * (-x0 / x1 ** 2)
+        return gx0, gx1
+
+class Pow(Function):
+    def __init__(self, c):
+        self.c = c
+
+    def forward(self, x):
+        y = x ** self.c
+        return y
+
+    def backward(self, gy):
+        x = self.inputs[0].data
+        c = self.c
+        gx = c * x ** (c-1) * gy
+        return gx
+
+def add(x0, x1):
+    x1 = as_array(x1)
+    f = Add()
+    return f(x0, x1)
+
+def mul(x0, x1):
+    x1 = as_array(x1)
+    f = Mul()
+    return f(x0, x1)
+
+def neg(x):
+    f = Neg()
+    return f(x)
+
+def sub(x0, x1):
+    x1 = as_array(x1)
+    f = Sub()
+    return f(x0, x1)
+
+def rsub(x0, x1):
+    x1 = as_array(x1)
+    f = Sub()
+    return f(x1, x0)
+
+def div(x0, x1):
+    x1 = as_array(x1)
+    f = Div()
+    return f(x0, x1)
+
+def rdiv(x0, x1):
+    x1 = as_array(x1)
+    f = Div()
+    return f(x1, x0)
+
+def pow(x, c):
+    f = Pow(c)
+    return f(x)
+
+Variable.__add__ = add
+Variable.__radd__ = add
+Variable.__mul__ = mul
+Variable.__rmul__ = mul
+Variable.__neg__ = neg
+Variable.__sub__ = sub
+Variable.__rsub__ = rsub
+Variable.__truediv__ = div
+Variable.__rtruediv__ = rdiv
+Variable.__pow__ = pow
+
 class Square(Function):
     def forward(self, x):
         y = x ** 2
@@ -170,20 +259,42 @@ class Exp(Function):
         gx = np.exp(x) * gy
         return gx
 
-def add(x0, x1):
-    x1 = as_array(x1)
-    f = Add()
-    return f(x0, x1)
+def square(x):
+    f = Square()
+    return f(x)
 
-def mul(x0, x1):
-    x1 = as_array(x1)
-    f = Mul()
-    return f(x0, x1)
+def exp(x):
+    f = Exp()
+    return f(x)
+
 
 Variable.__add__ = add
 Variable.__radd__ = add
 Variable.__mul__ = mul
 Variable.__rmul__ = mul
+Variable.__neg__ = neg
+Variable.__sub__ = sub
+Variable.__rsub__ = sub
+
+class Square(Function):
+    def forward(self, x):
+        y = x ** 2
+        return y
+
+    def backward(self, gy):
+        x = self.inputs[0].data
+        gx = 2 * x * gy
+        return gx
+
+class Exp(Function):
+    def forward(self, x):
+        y = np.exp(x)
+        return y
+
+    def backward(self, gy):
+        x = self.inputs[0].data
+        gx = np.exp(x) * gy
+        return gx
 
 def square(x):
     f = Square()
