@@ -228,79 +228,15 @@ def pow(x, c):
     f = Pow(c)
     return f(x)
 
-Variable.__add__ = add
-Variable.__radd__ = add
-Variable.__mul__ = mul
-Variable.__rmul__ = mul
-Variable.__neg__ = neg
-Variable.__sub__ = sub
-Variable.__rsub__ = rsub
-Variable.__truediv__ = div
-Variable.__rtruediv__ = rdiv
-Variable.__pow__ = pow
-
-class Square(Function):
-    def forward(self, x):
-        y = x ** 2
-        return y
-
-    def backward(self, gy):
-        x = self.inputs[0].data
-        gx = 2 * x * gy
-        return gx
-
-class Exp(Function):
-    def forward(self, x):
-        y = np.exp(x)
-        return y
-
-    def backward(self, gy):
-        x = self.inputs[0].data
-        gx = np.exp(x) * gy
-        return gx
-
-def square(x):
-    f = Square()
-    return f(x)
-
-def exp(x):
-    f = Exp()
-    return f(x)
-
-
-Variable.__add__ = add
-Variable.__radd__ = add
-Variable.__mul__ = mul
-Variable.__rmul__ = mul
-Variable.__neg__ = neg
-Variable.__sub__ = sub
-Variable.__rsub__ = sub
-
-class Square(Function):
-    def forward(self, x):
-        y = x ** 2
-        return y
-
-    def backward(self, gy):
-        x = self.inputs[0].data
-        gx = 2 * x * gy
-        return gx
-
-class Exp(Function):
-    def forward(self, x):
-        y = np.exp(x)
-        return y
-
-    def backward(self, gy):
-        x = self.inputs[0].data
-        gx = np.exp(x) * gy
-        return gx
-
-def square(x):
-    f = Square()
-    return f(x)
-
-def exp(x):
-    f = Exp()
-    return f(x)
+def setup_variable():
+    Variable.__add__ = add
+    Variable.__radd__ = add
+    Variable.__mul__ = mul
+    Variable.__rmul__ = mul
+    Variable.__neg__ = neg
+    Variable.__sub__ = sub
+    Variable.__rsub__ = rsub
+    Variable.__truediv__ = div
+    Variable.__rtruediv__ = rdiv
+    Variable.__pow__ = pow
 
