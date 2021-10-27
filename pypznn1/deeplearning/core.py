@@ -23,7 +23,7 @@ class Variable:
     def __init__(self, data, name=None):
         if data is not None:
             if not isinstance(data, np.ndarray):
-                raise TypeError(f"{type(data)} is not supported.")
+                raise TypeError(f"{type(data)} is not supported")
 
         self.data = data
         self.name = name

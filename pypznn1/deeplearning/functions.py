@@ -41,6 +41,16 @@ class Cos(Function):
         gx = gy * -sin(x)
         return gx
 
+class Tanh(Function):
+    def forward(self, x):
+        y = np.tanh(x)
+        return y
+
+    def backward(self, gy):
+        y = self.outputs[0]()
+        gx = gy * (1 - y * y)
+        return gx
+
 def square(x):
     f = Square()
     return f(x)
@@ -55,5 +65,9 @@ def sin(x):
 
 def cos(x):
     f = Cos()
+    return f(x)
+
+def tanh(x):
+    f = Tanh()
     return f(x)
 
