@@ -98,6 +98,31 @@ class Sum(Function):
         gx = broadcast_to(gy, self.x_shape)
         return gx
 
+class BroadcastTo(Function):
+    def __init__(self, shape):
+        self.shape = shape
+    
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = np.broadcast_to(x, self.shape)
+        return y
+
+    def backward(self, gy):
+        gx = sum_to(gy, self.x_shape)
+        return gx
+
+class SumTo(Function):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = utils.sum_to(x, self.shape)
+        return y
+
+    def backward(self, gy):
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
 
 def square(x):
     f = Square()
@@ -131,4 +156,16 @@ def transpose(x, axes=None):
 
 def sum(x, axis=None, keepdims=False):
     f = Sum(axis, keepdims)
+    return f(x)
+
+def broadcast_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    f = BroadcastTo(shape)
+    return f(x)
+
+def sum_to(x, shape):
+    if x.shape == shape:
+        as_variable(x)
+    f = SumTo(shape)
     return f(x)
