@@ -1,5 +1,6 @@
 import numpy as np
 from pypznn1.deeplearning import Function
+from pypznn1.deeplearning.core import as_variable
 
 class Square(Function):
     def forward(self, x):
@@ -51,6 +52,27 @@ class Tanh(Function):
         gx = gy * (1 - y * y)
         return gx
 
+class Reshape(Function):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = x.reshape(self.shape)
+        return y
+
+    def backward(self, gy):
+        return reshape(gy, self.x_shape)
+
+class Transpose(Function):
+    def forward(self, x):
+        y = np.transpose(x)
+        return y
+
+    def backward(self, gy):
+        gx = transpose(gy)
+        return gx
+
 def square(x):
     f = Square()
     return f(x)
@@ -69,5 +91,15 @@ def cos(x):
 
 def tanh(x):
     f = Tanh()
+    return f(x)
+
+def reshape(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    f = Reshape(shape)
+    return f(x)
+
+def transpose(x):
+    f = Transpose()
     return f(x)
 

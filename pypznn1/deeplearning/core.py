@@ -1,6 +1,7 @@
 import contextlib
 import numpy as np
 import weakref
+import pypznn1.deeplearning
 
 class Config:
     enable_backprop = True
@@ -46,6 +47,10 @@ class Variable:
     @property
     def dtype(self):
         return self.data.dtype
+
+    @property
+    def T(self):
+        return pypznn1.deeplearning.functions.transpose(self)
 
     def __len__(self):
         return len(self.data)
@@ -99,6 +104,14 @@ class Variable:
 
     def cleargrad(self):
         self.grad = None
+
+    def reshape(self, *shape):
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return pypznn1.deeplearning.functions.reshape(self, shape)
+
+    def transpose(self):
+        return pypznn1.deeplearning.functions.transpose(self)
 
 def as_array(x):
     if np.isscalar(x):
