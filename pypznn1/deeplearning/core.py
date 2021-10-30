@@ -118,6 +118,9 @@ class Variable:
                 axes = axes[0]
         return pypznn1.deeplearning.functions.transpose(self, axes)
 
+    def sum(self, axis=None, keepdims=False):
+        return pypznn1.deeplearning.functions.sum(self, axis, keepdims)
+
 def as_array(x):
     if np.isscalar(x):
         return np.array(x)

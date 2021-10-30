@@ -1,6 +1,7 @@
 import numpy as np
 from pypznn1.deeplearning import Function
 from pypznn1.deeplearning.core import as_variable
+from pypznn1.deeplearning import utils
 
 class Square(Function):
     def forward(self, x):
@@ -82,6 +83,22 @@ class Transpose(Function):
         gx = transpose(gy)
         return gx
 
+class Sum(Function):
+    def __init__(self, axis, keepdims):
+        self.axis = axis
+        self.keepdims = keepdims
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = x.sum(axis=self.axis, keepdims=self.keepdims)
+        return y
+    
+    def backward(self, gy):
+        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
+
+
 def square(x):
     f = Square()
     return f(x)
@@ -112,3 +129,6 @@ def transpose(x, axes=None):
     f = Transpose(axes)
     return f(x)
 
+def sum(x, axis=None, keepdims=False):
+    f = Sum(axis, keepdims)
+    return f(x)
