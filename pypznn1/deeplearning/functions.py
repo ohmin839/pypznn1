@@ -65,11 +65,20 @@ class Reshape(Function):
         return reshape(gy, self.x_shape)
 
 class Transpose(Function):
+    def __init__(self, axes=None):
+        self.axes = axes
+
     def forward(self, x):
-        y = np.transpose(x)
+        y = x.transpose(self.axes)
         return y
 
     def backward(self, gy):
+        if self.axes is None:
+            gx = transpose(gy)
+            return gx
+            
+        axes_len = len(self.axes)
+        inv_axes = tuple(np.argsort([ax % axes_len for ax in self.axes]))
         gx = transpose(gy)
         return gx
 
@@ -99,7 +108,7 @@ def reshape(x, shape):
     f = Reshape(shape)
     return f(x)
 
-def transpose(x):
-    f = Transpose()
+def transpose(x, axes=None):
+    f = Transpose(axes)
     return f(x)
 
