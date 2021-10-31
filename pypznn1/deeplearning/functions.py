@@ -124,6 +124,18 @@ class SumTo(Function):
         gx = broadcast_to(gy, self.x_shape)
         return gx
 
+class MatMul(Function):
+    def forward(self, x, W):
+        y = x.dot(W)
+        return y
+    
+    def backward(self, gy):
+        x, W = self.inputs
+        gx = matmul(gy, W.T)
+        gW = matmul(x.T, gy)
+        return gx, gW
+
+
 def square(x):
     f = Square()
     return f(x)
@@ -169,3 +181,7 @@ def sum_to(x, shape):
         as_variable(x)
     f = SumTo(shape)
     return f(x)
+
+def matmul(x, W):
+    f = MatMul()
+    return f(x, W)
