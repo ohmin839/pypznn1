@@ -22,5 +22,7 @@ else:
 
     import pypznn1.deeplearning.functions
     import pypznn1.deeplearning.layers
+    import pypznn1.deeplearning.optimizers
+    import pypznn1.deeplearning.utils
 
 setup_variable()
