@@ -1,7 +1,7 @@
 import numpy as np
-from pypznn1.deeplearning import Function
-from pypznn1.deeplearning.core import as_variable
+import pypznn1.deeplearning
 from pypznn1.deeplearning import utils
+from pypznn1.deeplearning.core import Function, Variable, as_variable, as_array
 
 class Square(Function):
     def forward(self, x):
@@ -173,6 +173,71 @@ class Sigmoid(Function):
         gx = gy * y * (1 - y)
         return gx
 
+class GetItem(Function):
+    def __init__(self, slices):
+        self.slices = slices
+    
+    def forward(self, x):
+        y = x[self.slices]
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        f = GetItemGrad(self.slices, x.shape)
+        return f(gy)
+
+class GetItemGrad(Function):
+    def __init__(self, slices, in_shape):
+        self.slices = slices
+        self.in_shape = in_shape
+
+    def forward(self, gy):
+        gx = np.zeros(self.in_shape, dtype=gy.dtype)
+        # TODO
+        np.add.at(gx, self.slices, gy)
+        return gx
+
+    def backward(self, ggx):
+        return get_item(ggx, self.slices)
+
+class Softmax(Function):
+    def __init__(self, axis=1):
+        self.axis = axis
+
+    def forward(self, x):
+        # TODO cuda
+        y = x - x.max(axis=self.axis, keepdims=True)
+        y = np.exp(y)
+        y /= y.sum(axis=self.axis, keepdims=True)
+        return y
+
+    def backward(self, gy):
+        y = self.outputs[0]()
+        gx = y * gy
+        sumdx = gx.sum(axis=self.axis, keepdims=True)
+        gx -= y * sumdx
+        return gx
+
+class SoftmaxCrossEntropy(Function):
+    def forward(self, x, t):
+        N = x.shape[0]
+        log_z = utils.logsumexp(x, axis=1)
+        log_p = x - log_z
+        log_p = log_p[np.arange(N), t.ravel()]
+        y = -log_p.sum() / np.float32(N)
+        return y
+
+    def backward(self, gy):
+        x, t = self.inputs
+        N, CLS_NUM = x.shape
+
+        gy *= 1/N
+        y = softmax(x)
+        # TODO cuda
+        t_onehot = np.eye(CLS_NUM, dtype=t.dtype)[t.data]
+        y = (y - t_onehot) * gy
+        return y
+
 
 def square(x):
     f = Square()
@@ -235,3 +300,15 @@ def linear(x, W, b=None):
 def sigmoid(x):
     f = Sigmoid()
     return f(x)
+
+def get_item(x, slices):
+    f = GetItem(slices)
+    return f(x)
+
+def softmax(x, axis=1):
+    f = Softmax(axis)
+    return f(x)
+
+def softmax_cross_entropy(x, t):
+    f = SoftmaxCrossEntropy()
+    return f(x, t)

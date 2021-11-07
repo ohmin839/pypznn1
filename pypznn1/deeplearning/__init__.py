@@ -17,6 +17,7 @@ else:
     from pypznn1.deeplearning.core import as_array
     from pypznn1.deeplearning.core import as_variable
     from pypznn1.deeplearning.core import setup_variable
+    from pypznn1.deeplearning.core import Config
     from pypznn1.deeplearning.layers import Layer
     from pypznn1.deeplearning.models import Model
 

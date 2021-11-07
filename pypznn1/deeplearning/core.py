@@ -283,3 +283,5 @@ def setup_variable():
     Variable.__rtruediv__ = rdiv
     Variable.__pow__ = pow
 
+    from pypznn1.deeplearning.functions import get_item
+    Variable.__getitem__ = get_item
