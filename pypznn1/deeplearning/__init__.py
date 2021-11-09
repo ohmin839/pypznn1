@@ -22,6 +22,7 @@ else:
     from pypznn1.deeplearning.models import Model
 
     import pypznn1.deeplearning.datasets
+    import pypznn1.deeplearning.dataloaders
     import pypznn1.deeplearning.functions
     import pypznn1.deeplearning.layers
     import pypznn1.deeplearning.optimizers
