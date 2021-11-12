@@ -173,6 +173,17 @@ class Sigmoid(Function):
         gx = gy * y * (1 - y)
         return gx
 
+class ReLU(Function):
+    def forward(self, x):
+        y = np.maximum(x, 0.0)
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        mask = x.data > 0
+        gx = gy * mask
+        return gx
+
 class GetItem(Function):
     def __init__(self, slices):
         self.slices = slices
@@ -299,6 +310,10 @@ def linear(x, W, b=None):
 
 def sigmoid(x):
     f = Sigmoid()
+    return f(x)
+
+def relu(x):
+    f = ReLU()
     return f(x)
 
 def get_item(x, slices):
