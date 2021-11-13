@@ -14,6 +14,7 @@ else:
     from pypznn1.deeplearning.core import Function
     from pypznn1.deeplearning.core import using_config
     from pypznn1.deeplearning.core import no_grad
+    from pypznn1.deeplearning.core import test_mode
     from pypznn1.deeplearning.core import as_array
     from pypznn1.deeplearning.core import as_variable
     from pypznn1.deeplearning.core import setup_variable
@@ -31,5 +32,6 @@ else:
     import pypznn1.deeplearning.datasets
     import pypznn1.deeplearning.utils
     import pypznn1.deeplearning.transforms
+    import pypznn1.deeplearning.cuda
 
 setup_variable()

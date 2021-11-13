@@ -2,6 +2,7 @@ import numpy as np
 import pypznn1.deeplearning
 from pypznn1.deeplearning import utils
 from pypznn1.deeplearning.core import Function, Variable, as_variable, as_array
+from pypznn1.deeplearning import cuda
 
 class Square(Function):
     def forward(self, x):
@@ -15,17 +16,20 @@ class Square(Function):
 
 class Exp(Function):
     def forward(self, x):
-        y = np.exp(x)
+        xp = cuda.get_array_module(x)
+        y = xp.exp(x)
         return y
 
     def backward(self, gy):
         x, = self.inputs
-        gx = np.exp(x) * gy
+        xp = cuda.get_array_module(x)
+        gx = xp.exp(x) * gy
         return gx
 
 class Sin(Function):
     def forward(self, x):
-        y = np.sin(x)
+        xp = cuda.get_array_module(x)
+        y = xp.sin(x)
         return y
 
     def backward(self, gy):
@@ -35,7 +39,8 @@ class Sin(Function):
 
 class Cos(Function):
     def forward(self, x):
-        y = np.cos(x)
+        xp = cuda.get_array_module(x)
+        y = xp.cos(x)
         return y
 
     def backward(self, gy):
@@ -45,7 +50,8 @@ class Cos(Function):
 
 class Tanh(Function):
     def forward(self, x):
-        y = np.tanh(x)
+        xp = cuda.get_array_module(x)
+        y = xp.tanh(x)
         return y
 
     def backward(self, gy):
@@ -79,7 +85,8 @@ class Transpose(Function):
             return gx
             
         axes_len = len(self.axes)
-        inv_axes = tuple(np.argsort([ax % axes_len for ax in self.axes]))
+        xp = cuda.get_array_module(x)
+        inv_axes = tuple(xp.argsort([ax % axes_len for ax in self.axes]))
         gx = transpose(gy)
         return gx
 
@@ -104,7 +111,8 @@ class BroadcastTo(Function):
     
     def forward(self, x):
         self.x_shape = x.shape
-        y = np.broadcast_to(x, self.shape)
+        xp = cuda.get_array_module(x)
+        y = xp.broadcast_to(x, self.shape)
         return y
 
     def backward(self, gy):
@@ -165,8 +173,9 @@ class Linear(Function):
 
 class Sigmoid(Function):
     def forward(self, x):
-       y = 1 / (1 + np.exp(-x)) 
-       return y
+        xp = cuda.get_array_module(x)
+        y = 1 / (1 + xp.exp(-x)) 
+        return y
 
     def backward(self, gy):
         y = self.outputs[0]()
@@ -175,7 +184,8 @@ class Sigmoid(Function):
 
 class ReLU(Function):
     def forward(self, x):
-        y = np.maximum(x, 0.0)
+        xp = cuda.get_array_module(x)
+        y = xp.maximum(x, 0.0)
         return y
 
     def backward(self, gy):
@@ -203,9 +213,12 @@ class GetItemGrad(Function):
         self.in_shape = in_shape
 
     def forward(self, gy):
-        gx = np.zeros(self.in_shape, dtype=gy.dtype)
-        # TODO
-        np.add.at(gx, self.slices, gy)
+        xp = cuda.get_array_module(gy)
+        gx = xp.zeros(self.in_shape, dtype=gy.dtype)
+        if xp is np:
+            np.add.at(gx, self.slices, gy)
+        else:
+            xp.scatter_add(gx, self.slices, gy)
         return gx
 
     def backward(self, ggx):
@@ -216,9 +229,9 @@ class Softmax(Function):
         self.axis = axis
 
     def forward(self, x):
-        # TODO cuda
+        xp = cuda.get_array_module(x)
         y = x - x.max(axis=self.axis, keepdims=True)
-        y = np.exp(y)
+        y = xp.exp(y)
         y /= y.sum(axis=self.axis, keepdims=True)
         return y
 
@@ -234,8 +247,9 @@ class SoftmaxCrossEntropy(Function):
         N = x.shape[0]
         log_z = utils.logsumexp(x, axis=1)
         log_p = x - log_z
-        log_p = log_p[np.arange(N), t.ravel()]
-        y = -log_p.sum() / np.float32(N)
+        xp = cuda.get_array_module(x)
+        log_p = log_p[xp.arange(N), t.ravel()]
+        y = -log_p.sum() / xp.float32(N)
         return y
 
     def backward(self, gy):
@@ -244,8 +258,8 @@ class SoftmaxCrossEntropy(Function):
 
         gy *= 1/N
         y = softmax(x)
-        # TODO cuda
-        t_onehot = np.eye(CLS_NUM, dtype=t.dtype)[t.data]
+        xp = cuda.get_array_module(x)
+        t_onehot = xp.eye(CLS_NUM, dtype=t.dtype)[t.data]
         y = (y - t_onehot) * gy
         return y
 
