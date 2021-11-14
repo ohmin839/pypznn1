@@ -1,3 +1,4 @@
+import os
 import time
 import pypznn1.deeplearning
 import pypznn1.deeplearning.functions as F
@@ -16,6 +17,9 @@ train_loader = DataLoader(train_set, batch_size)
 #optimizer = optimizers.SGD().setup(model)
 model = MLP((hidden_size, hidden_size, 10))
 optimizer = optimizers.Adam().setup(model)
+
+if os.path.exists('my_mlp.npz'):
+    model.load_weights('my_mlp.npz')
 
 if pypznn1.deeplearning.cuda.gpu_enable:
     #train_loader.to_cpu()
@@ -37,3 +41,5 @@ for epoch in range(max_epoch):
 
     elapsed_time = time.time() - start
     print(f"epoch {epoch + 1}, loss: {sum_loss / len(train_set)}, time: {elapsed_time}[sec]")
+
+model.save_weights('my_mlp.npz')
