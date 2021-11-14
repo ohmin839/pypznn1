@@ -5,6 +5,7 @@ import pypznn1.deeplearning
 
 class Config:
     enable_backprop = True
+    train = True
 
 @contextlib.contextmanager
 def using_config(name, value):
