@@ -362,3 +362,17 @@ def dropout(x, dropout_ratio=0.5):
     else:
         return x
 
+
+from pypznn1.deeplearning.functions_conv import conv2d
+from pypznn1.deeplearning.functions_conv import deconv2d
+from pypznn1.deeplearning.functions_conv import im2col
+from pypznn1.deeplearning.functions_conv import col2im
+from pypznn1.deeplearning.functions_conv import pooling
+#from pypznn1.deeplearning.functions_conv import average_pooling
+from pypznn1.deeplearning.core import add
+from pypznn1.deeplearning.core import sub
+from pypznn1.deeplearning.core import rsub
+from pypznn1.deeplearning.core import mul
+from pypznn1.deeplearning.core import div
+from pypznn1.deeplearning.core import neg
+from pypznn1.deeplearning.core import pow

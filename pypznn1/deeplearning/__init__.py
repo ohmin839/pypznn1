@@ -27,6 +27,7 @@ else:
     import pypznn1.deeplearning.datasets
     import pypznn1.deeplearning.dataloaders
     import pypznn1.deeplearning.functions
+    import pypznn1.deeplearning.functions_conv
     import pypznn1.deeplearning.layers
     import pypznn1.deeplearning.optimizers
     import pypznn1.deeplearning.datasets
