@@ -123,6 +123,7 @@ class Pooling(Function):
         col = col.reshape(N, C, KH * KW, OH, OW)
         self.indexes = col.argmax(axis=2)
         y = col.max(axis=2)
+        return y
 
     def backward(self, gy):
         f = Pooling2DGrad(self)
