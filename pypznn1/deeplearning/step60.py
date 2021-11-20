@@ -2,21 +2,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pypznn1.deeplearning
 from pypznn1.deeplearning import Model
-from pypznn1.deeplearning import optimizers
+from pypznn1.deeplearning import SeqDataLoader
 import pypznn1.deeplearning.functions as F
 import pypznn1.deeplearning.layers as L
 
 max_epoch = 100
+batch_size = 30
 hidden_size = 10
 bptt_length = 30
 
 train_set = pypznn1.deeplearning.datasets.SinCurve(train=True)
+dataloader = SeqDataLoader(train_set, batch_size=batch_size)
 seqlen = len(train_set)
 
-class SimpleRNN(Model):
+class BetterRNN(Model):
     def __init__(self, hidden_size, out_size):
         super().__init__()
-        self.rnn = L.RNN(hidden_size)
+        self.rnn = L.LSTM(hidden_size)
         self.fc = L.Linear(out_size)
 
     def reset_state(self):
@@ -27,7 +29,7 @@ class SimpleRNN(Model):
         y = self.fc(h)
         return y
 
-model = SimpleRNN(hidden_size, 1)
+model = BetterRNN(hidden_size, 1)
 optimizer = pypznn1.deeplearning.optimizers.Adam().setup(model)
 
 for epoch in range(max_epoch):

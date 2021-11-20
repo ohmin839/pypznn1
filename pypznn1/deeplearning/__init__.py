@@ -23,6 +23,7 @@ else:
     from pypznn1.deeplearning.models import Model
     from pypznn1.deeplearning.datasets import Dataset
     from pypznn1.deeplearning.dataloaders import DataLoader
+    from pypznn1.deeplearning.dataloaders import SeqDataLoader
 
     import pypznn1.deeplearning.datasets
     import pypznn1.deeplearning.dataloaders
