@@ -109,6 +109,61 @@ class MNIST(Dataset):
     def labels():
         return {0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9'}
 
+class CIFAR10(Dataset):
+    def __init__(self, train=True,
+                 transform=Compose([ToFloat(), Normalize(mean=0.5, std=0.5)]),
+                 target_transform=None):
+        super().__init__(train, transform, target_transform)
+
+    def prepare(self):
+        url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
+        self.data, self.label = load_cache_npz(url, self.train)
+        if self.data is not None:
+            return
+        filepath = get_file(url)
+        if self.train:
+            self.data = np.empty((50000, 3 * 32 * 32))
+            self.label = np.empty((50000), dtype=np.int)
+            for i in range(5):
+                self.data[i * 10000: (i + 1) * 10000] = self._load_data(filepath, i + 1, 'train')
+                self.label[i * 10000: (i + 1) * 10000] = self._load_label(filepath, i + 1, 'train')
+        else:
+            self.data = self._load_data(filepath, 5, 'test')
+            self.label = self._load_label(filepath, 5, 'test')
+        self.data = self.data.reshape(-1, 3, 32, 32)
+        save_cache_npz(self.data, self.label, url, self.train)
+
+    def _load_data(self, filename, idx, data_type='train'):
+        assert data_type in ['train', 'test']
+        with tarfile.open(filename, 'r:gz') as file:
+            for item in file.getmembers():
+                if (f'data_batch_{idx}' in item.name and data_type == 'train') or ('test_batch' in item.name and data_type == 'test'):
+                    data_dict = pickle.load(file.extractfile(item), encoding='bytes')
+                    data = data_dict[b'data']
+                    return data
+
+    def _load_label(self, filename, idx, data_type='train'):
+        assert data_type in ['train', 'test']
+        with tarfile.open(filename, 'r:gz') as file:
+            for item in file.getmembers():
+                if (f'data_batch_{idx}' in item.name and data_type == 'train') or ('test_batch' in item.name and data_type == 'test'):
+                    data_dict = pickle.load(file.extractfile(item), encoding='bytes')
+                    return np.array(data_dict[b'labels'])
+
+    def show(self, row=10, col=10):
+        H, W = 32, 32
+        img = np.zeros((H * row, W * col, 3))
+        for r in range(row):
+            for c in range(col):
+                img[r*H:(r+1)*H, c*W:(c+1)*W] = self.data[np.random.randint(0, len(self.data)-1)].reshape(3,H,W).transpose(1,2,0)/255
+        plt.imshow(img, interpolation='nearest')
+        plt.axis('off')
+        plt.show()
+
+    @staticmethod
+    def labels():
+        return {0: 'airplane', 1: 'automobile', 2: 'bird', 3: 'cat', 4: 'deer', 5: 'dog', 6: 'frog', 7: 'horse', 8: 'ship', 9: 'truck'}
+
 class ImageNet(Dataset):
     def __init__(self):
         NotImplemented
@@ -136,3 +191,33 @@ class SinCurve(Dataset):
         y = y.astype(dtype)
         self.data = y[:-1][:, np.newaxis]
         self.label = y[1:][:, np.newaxis]
+
+
+def load_cache_npz(filename, train=False):
+    filename = filename[filename.rfind('/') + 1:]
+    suffix = '.train.npz' if train else '.test.npz'
+    filepath = os.path.join(cache_dir, filename + suffix)
+    if not os.path.exists(filepath):
+        return None, None
+    
+    loaded = np.load(filepath)
+    return loaded['data'], loaded['label']
+
+def save_cache_npz(data, label, filename, train=False):
+    filename = filename[filename.rfind('/') + 1:]
+    suffix = '.train.npz' if train else '.test.npz'
+    filepath = os.path.join(cache_dir, filename + suffix)
+
+    if os.path.exists(filepath):
+        return
+    
+    print("Saving: " + filename + suffix)
+    try:
+        np.savez_compressed(filepath, data=data, label=label)
+    except (Exception, KeyboardInterrupt) as e:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        raise
+    print('Done')
+    return filepath
+
