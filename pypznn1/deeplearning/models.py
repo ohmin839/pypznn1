@@ -159,7 +159,7 @@ class BuildingBlock(Layer):
     def forward(self, x):
         for name in self._forward:
             l = getattr(self, name)
-            x = x(l)
+            x = l(x)
         return x
 
 class BottleneckA(Layer):
