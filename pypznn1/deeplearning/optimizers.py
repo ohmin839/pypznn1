@@ -29,7 +29,7 @@ class Optimizer:
 class WeightDecay:
     def __init__(self, rate):
         self.rate = rate
-    
+
     def __call__(self, params):
         for param in params:
             param.grad.data += self.rate * param.data
@@ -48,7 +48,7 @@ class MomentumSGD(Optimizer):
         self.lr = lr
         self.momentum = momentum
         self.vs = {}
-    
+
     def update_one(self, param):
         v_key = id(param)
         if v_key not in self.vs:

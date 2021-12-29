@@ -438,7 +438,7 @@ from pypznn1.deeplearning.functions_conv import deconv2d
 from pypznn1.deeplearning.functions_conv import im2col
 from pypznn1.deeplearning.functions_conv import col2im
 from pypznn1.deeplearning.functions_conv import pooling
-#from pypznn1.deeplearning.functions_conv import average_pooling
+from pypznn1.deeplearning.functions_conv import average_pooling
 from pypznn1.deeplearning.core import add
 from pypznn1.deeplearning.core import sub
 from pypznn1.deeplearning.core import rsub
