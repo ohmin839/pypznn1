@@ -194,6 +194,22 @@ class ReLU(Function):
         gx = gy * mask
         return gx
 
+class LeakyReLU(Function):
+    def __init__(self, slope):
+        self.slope = slope
+    
+    def forward(self, x):
+        y = x.copy()
+        y[x <= 0] *= self.slope
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        mask = (x.data > 0).astype(gy.dtype)
+        mask[mask <= 0] = self.slope
+        gx = gy * mask
+        return gx
+
 class GetItem(Function):
     def __init__(self, slices):
         self.slices = slices
@@ -240,6 +256,20 @@ class Softmax(Function):
         gx = y * gy
         sumdx = gx.sum(axis=self.axis, keepdims=True)
         gx -= y * sumdx
+        return gx
+
+class LogSoftmax(Function):
+    def __init__(self, axis=1):
+        self.axis = axis
+    
+    def forward(self, x):
+        log_z = utils.logsumexp(x, self.axis)
+        y = x - log_z
+        return y
+
+    def backward(self, gy):
+        y = self.outputs[0]()
+        gx = gy - exp(y) * gy.sum(axis=self.axis, keepdims=True)
         return gx
 
 class SoftmaxCrossEntropy(Function):
@@ -400,12 +430,20 @@ def relu(x):
     f = ReLU()
     return f(x)
 
+def leaky_relu(x, slope=0.2):
+    f = LeakyReLU(slope)
+    return f(x)
+
 def get_item(x, slices):
     f = GetItem(slices)
     return f(x)
 
 def softmax(x, axis=1):
     f = Softmax(axis)
+    return f(x)
+
+def log_softmax(x, axis=1):
+    f = LogSoftmax(axis)
     return f(x)
 
 def softmax_cross_entropy(x, t):
@@ -431,6 +469,40 @@ def dropout(x, dropout_ratio=0.5):
         return y
     else:
         return x
+
+
+class Max(Function):
+    def __init__(self, axis=None, keepdims=False):
+        self.axis = axis
+        self.keepdims = keepdims
+
+    def forward(self, x):
+        y = x.max(axis=self.axis, keepdims=self.keepdims)
+        return y
+
+    def backward(self, gy):
+        x = self.inputs[0]
+        y = self.outputs[0]()
+
+        shape = utils.max_backward_shape(x, self.axis)
+        gy = reshape(gy, shape)
+        y = reshape(y, shape)
+        cond = (x.data == y.data)
+        gy = broadcast_to(gy, cond.shape)
+        return gy * cond
+
+class Min(Max):
+    def forward(self, x):
+        y = x.min(axis=self.axis, keepdims=self.keepdims)
+        return y
+
+def max(x, axis=None, keepdims=False):
+    f = Max(axis, keepdims)
+    return f(x)
+
+def min(x, axis=None, keepdims=False):
+    f = Min(axis, keepdims)
+    return f(x)
 
 
 from pypznn1.deeplearning.functions_conv import conv2d

@@ -3,13 +3,81 @@ import subprocess
 import urllib.request
 import numpy as np
 from pypznn1.deeplearning import Variable
+from pypznn1.deeplearning.core import as_variable
+from pypznn1.deeplearning import cuda
 
-def numerical_diff(f, x, eps=1e-4):
-    x0 = Variable(x.data - eps)
-    x1 = Variable(x.data + eps)
-    y0 = f(x0)
-    y1 = f(x1)
-    return (y1.data - y0.data) / (2 * eps)
+def gradient_check(f, x, *args, rtol=1e-4, atol=1e-5, **kwargs):
+    x = as_variable(x)
+    x.data = x.data.astype(np.float64)
+
+    num_grad = numerical_grad(f, x, *args, **kwargs)
+    y = f(x, *args, **kwargs)
+    y.backward()
+    bp_grad = x.grad.data
+
+    assert bp_grad.shape == num_grad.shape
+    res = array_allclose(num_grad, bp_grad, atol=atol, rtol=rtol)
+
+    if not res:
+        print('')
+        print('========== FAILED (Gradient Check) ==========')
+        print('Numerical Grad')
+        print(' shape: {}'.format(num_grad.shape))
+        val = str(num_grad.flatten()[:10])
+        print(' values: {} ...'.format(val[1:-1]))
+        print('Backprop Grad')
+        print(' shape: {}'.format(bp_grad.shape))
+        val = str(bp_grad.flatten()[:10])
+        print(' values: {} ...'.format(val[1:-1]))
+    return res
+
+def numerical_grad(f, x, *args, **kwargs):
+    eps = 1e-4
+
+    x = x.data if isinstance(x, Variable) else x
+    xp = cuda.get_array_module(x)
+    if xp is not np:
+        np_x = cuda.as_numpy(x)
+    else:
+        np_x = x
+    grad = xp.zeros_like(x)
+
+    it = np.nditer(np_x, flags=['multi_index'], op_flags=['readwrite'])
+    while not it.finished:
+        idx = it.multi_index
+        tmp_val = x[idx].copy()
+
+        x[idx] = tmp_val + eps
+        y1 = f(x, *args, **kwargs)
+        if isinstance(y1, Variable):
+            y1 = y1.data
+        y1 = y1.copy()
+
+        x[idx] = tmp_val - eps
+        y2 = f(x, *args, **kwargs)
+        if isinstance(y2, Variable):
+            y2 = y2.data
+        y2 = y2.copy()
+
+        diff = (y1 - y2).sum()
+        grad[idx] = diff / (2 * eps)
+
+        x[idx] = tmp_val
+        it.iternext()
+
+    return grad
+
+def array_equal(a, b):
+    a = a.data if isinstance(a, Variable) else a
+    b = b.data if isinstance(b, Variable) else b
+    a, b = cuda.as_numpy(a), cuda.as_numpy(b)
+    return np.array_equal(a, b)
+
+def array_allclose(a, b, rtol=1e-4, atol=1e-5):
+    a = a.data if isinstance(a, Variable) else a
+    b = b.data if isinstance(b, Variable) else b
+    a, b = cuda.as_numpy(a), cuda.as_numpy(b)
+    return np.allclose(a, b, atol=atol, rtol=rtol)
 
 def _dot_var(v, verbose=False):
     dot_var = '{} [label="{}", color=orange, style=filled]\n'
@@ -103,14 +171,25 @@ def reshape_sum_backward(gy, x_shape, axis, keepdims):
     return gy
 
 def logsumexp(x, axis=1):
-    # TODO cuda
+    xp = cuda.get_array_module(x)
     m = x.max(axis=axis, keepdims=True)
     y = x - m
-    np.exp(y, out=y)
+    xp.exp(y, out=y)
     s = y.sum(axis=axis, keepdims=True)
-    np.log(s, out=s)
+    xp.log(s, out=s)
     m += s
     return m
+
+def max_backward_shape(x, axis):
+    if axis is None:
+        axis = range(x.ndim)
+    elif isinstance(axis, int):
+        axis = (axis,)
+    else:
+        axis = axis
+
+    shape = [s if ax not in axis else 1 for ax, s in enumerate(x.shape)]
+    return shape
 
 def pair(x):
     if isinstance(x, int):
@@ -158,3 +237,6 @@ def get_file(url, file_name=None):
 
 def get_conv_outsize(input_size, kernel_size, stride, pad):
     return (input_size + pad * 2 - kernel_size) // stride + 1
+
+def get_deconv_outsize(size, k, s, p):
+    return s * (size - 1) + k - 2 * p

@@ -1,7 +1,7 @@
 import numpy as np
 from pypznn1.deeplearning import cuda
 from pypznn1.deeplearning.core import as_variable, Function
-from pypznn1.deeplearning.utils import pair, get_conv_outsize
+from pypznn1.deeplearning.utils import pair, get_conv_outsize, get_deconv_outsize
 from pypznn1.deeplearning.functions import linear, broadcast_to
 
 class Conv2d(Function):
@@ -52,8 +52,8 @@ class Deconv2d(Function):
         C, OC, KH, KW = Weight.shape
         N, C, H, W = x.shape
         if self.outsize is None:
-            out_h = get_conv_outsize(H, KH, SH, PH)
-            out_w = get_conv_outsize(W, KW, SW, PW)
+            out_h = get_deconv_outsize(H, KH, SH, PH)
+            out_w = get_deconv_outsize(W, KW, SW, PW)
         else:
             out_h, out_w = pair(self.outsize)
         img_shape = (N, OC, out_h, out_w)
@@ -376,11 +376,11 @@ def _col2im_gpu(col, sy, sx, ph, pw, h, w):
                     if (out_x % sx != 0) continue;
                     out_x /= sx;
                     int k = out_y + out_h * (kx + kw * (ky + kh * c0));
-                    val = val + col[out_x + out_w * k]
+                    val = val + col[out_x + out_w * k];
                 }
             }
             img = val;
-        '''
+        ''',
         'col2im')(col.reduced_view(),
                   h, w, out_h, out_w, kh, kw, sy, sx, ph, pw, dx, dy, img)
 
