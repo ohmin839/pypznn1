@@ -20,6 +20,7 @@ class Direction(Enum):
 class Puzzle:
     def __init__(self, n):
         self.n = n
+        self.empty_value = n**2
         self.reset()
 
     def reset(self):
@@ -38,7 +39,7 @@ class Puzzle:
         elif direction == Direction.LEFT:
             j += 1
 
-        if self.grid[i, j] == -1:
+        if self.grid[i, j] == 0:
             return False
         else:
             return True
@@ -59,7 +60,7 @@ class Puzzle:
 
             n = self.grid[n_i, n_j]
             self.grid[o_i, o_j] = n
-            self.grid[n_i, n_j] = 0
+            self.grid[n_i, n_j] = self.empty_value
             self.empty_point = (n_i, n_j)
 
         return self
@@ -86,17 +87,15 @@ class Puzzle:
         grid = self.grid[1:-1, 1:-1].copy()
         return np.array2string(
                 grid,
-                formatter={"int": lambda x: "  " if x == 0 else f"{x:2d}"})
+                formatter={"int": lambda x: "  " if x == self.empty_value else f"{x:2d}"})
 
     @classmethod
     def get_initial_grid(cls, n):
         grid = np.array(
-                list(range(1, n**2)) + [0],
+                list(range(1, n**2+1)),
                 dtype=np.int32).reshape(n, n)
         grid = np.pad(
                 grid,
                 ((1, 1), (1, 1)),
-                "constant",
-                constant_values=-1)
+                "constant")
         return grid
-
