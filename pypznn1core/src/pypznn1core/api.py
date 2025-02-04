@@ -1,5 +1,6 @@
 from enum import Enum
-import numpy as np
+import os
+import random
 
 class Direction(Enum):
     UP = 1
@@ -19,15 +20,16 @@ class Direction(Enum):
 
 class Puzzle:
     def __init__(self, n):
-        self.n = n
+        self._n = n
         self.reset()
+        self._steps = 0
 
     def reset(self):
-        self.grid = Puzzle.get_initial_grid(self.n)
-        self.empty_point = (self.n, self.n)
+        self._grid = Puzzle.get_initial_grid(self._n)
+        self._empty_point = (self._n, self._n)
 
     def can_move(self, direction):
-        i, j = self.empty_point[0], self.empty_point[1]
+        i, j = self._empty_point[0], self._empty_point[1]
 
         if direction == Direction.UP:
             i += 1
@@ -38,14 +40,11 @@ class Puzzle:
         elif direction == Direction.LEFT:
             j += 1
 
-        if self.grid[i, j] == -1:
-            return False
-        else:
-            return True
+        return self._grid[i][j] > 0
 
     def move(self, direction):
         if self.can_move(direction):
-            o_i, o_j = self.empty_point[0], self.empty_point[1]
+            o_i, o_j = self._empty_point[0], self._empty_point[1]
             n_i, n_j = o_i, o_j
 
             if direction == Direction.UP:
@@ -57,21 +56,22 @@ class Puzzle:
             if direction == Direction.LEFT:
                 n_j += 1
 
-            n = self.grid[n_i, n_j]
-            self.grid[o_i, o_j] = n
-            self.grid[n_i, n_j] = 0
-            self.empty_point = (n_i, n_j)
+            n_v = self._grid[n_i][n_j]
+            self._grid[o_i][o_j] = n_v
+            self._grid[n_i][n_j] = self.empty_value
+            self._empty_point = (n_i, n_j)
+            self._steps += 1
 
         return self
 
     def has_completed(self):
-        return np.array_equal(self.grid, Puzzle.get_initial_grid(self.n))
+        return self._grid == Puzzle.get_initial_grid(self._n)
 
     def move_random(self, prev_direction=None):
         options = [d for d in Direction.get_directions() if self.can_move(d)]
         if prev_direction:
             options.remove(prev_direction.get_opposite())
-        next_direction = np.random.choice(options)
+        next_direction = random.choice(options)
         self.move(next_direction)
         return next_direction
 
@@ -81,22 +81,35 @@ class Puzzle:
         for _ in range(shuffles):
             next_direction = self.move_random(prev_direction)
             prev_direction = next_direction        
+        self._steps = 0
 
     def __repr__(self):
-        grid = self.grid[1:-1, 1:-1].copy()
-        return np.array2string(
-                grid,
-                formatter={"int": lambda x: "  " if x == 0 else f"{x:2d}"})
+        formatted =  (os.linesep*2).join(
+            (' '*2).join(
+                ' '*2 if i == self.empty_value else f'{i}'.rjust(2) for i in r
+                ) for r in self.grid)
+        return f'{os.linesep}{formatted}{os.linesep}'
+
+    @property
+    def size(self):
+        return self._n
+
+    @property
+    def empty_value(self):
+        return self._n ** 2
+
+    @property
+    def grid(self):
+        return [r[1:-1] for r in self._grid[1:-1]]
+
+    @property
+    def steps(self):
+        return self._steps
 
     @classmethod
     def get_initial_grid(cls, n):
-        grid = np.array(
-                list(range(1, n**2)) + [0],
-                dtype=np.int32).reshape(n, n)
-        grid = np.pad(
-                grid,
-                ((1, 1), (1, 1)),
-                "constant",
-                constant_values=-1)
+        grid = [[0 for _ in range(n+2)] for _ in range(n+2)]
+        for i in range(1, n+1):
+            for j in range(1, n+1):
+                grid[i][j] = (i-1) * n + j
         return grid
-
