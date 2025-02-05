@@ -1,6 +1,14 @@
+# docker
+.devcontainer
+
+# python
 *.pyc
 *.egg-info/
 __pycache__/
 .ipynb_checkpoints
-*.swp
+
+# mac
 .DS_Store
+
+# others
+*.swp

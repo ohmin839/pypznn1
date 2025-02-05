@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pypznn1core"
+version = "0.0.1"
+authors = [
+  { name="ohmin839" }
+]
+description = "Studies for (n^2-1) puzzles"
+dependencies = [
+
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest"
+]
+
+[project.scripts]
+pypznn1 = "pypznn1core.cli:main"
